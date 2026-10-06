@@ -2,6 +2,9 @@ package com.example.item;
 
 import java.util.List;
 import java.util.Optional;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
@@ -22,6 +25,11 @@ public interface ItemRepository extends JpaRepository<Item, Integer>, JpaSpecifi
         order by i.level desc, i.id asc
         """)
     List<Item> findByUnitCodeAndStatus(@Param("unitCode") String unitCode, @Param("status") String status);
+
+    /** 검색 페이지 조회 — 단원을 함께 가져온다. 태그는 컬렉션이라 {@code Item.tags} 의 {@code @BatchSize} 로 묶어 가져온다. */
+    @Override
+    @EntityGraph(attributePaths = {"unit"})
+    Page<Item> findAll(Specification<Item> spec, Pageable pageable);
 
     long countByUnitIdAndStatus(Integer unitId, String status);
 }
