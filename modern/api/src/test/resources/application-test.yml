@@ -13,6 +13,11 @@ spring:
     open-in-view: false
     show-sql: false
 
+grading:
+  base-url: http://localhost:0
+  username: test-grader
+  password: test-dummy-password
+
 logging:
   level:
     root: WARN
