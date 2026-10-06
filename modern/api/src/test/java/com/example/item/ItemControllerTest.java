@@ -1,5 +1,8 @@
 package com.example.item;
 
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -74,5 +77,54 @@ class ItemControllerTest {
             .andExpect(jsonPath("$.length()").value(2))
             .andExpect(jsonPath("$[0].id").value(2))
             .andExpect(jsonPath("$[1].tags[0]").value("계산"));
+    }
+
+    @Test
+    @DisplayName("GET /api/items/search → 200, {items, count, message} 모양의 JSON")
+    void searchItemsReturnsNormalizedShape() throws Exception {
+        when(itemService.search(eq("분수"), isNull(), isNull(), isNull(), isNull(), isNull(), isNull()))
+            .thenReturn(new ItemSearchResult(
+                List.of(new ItemSearchRow(1, "분모가 같은 분수의 덧셈", "M5-1", 1, List.of("계산"))),
+                1L, null));
+
+        mockMvc.perform(get("/api/items/search").param("q", "분수"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.items[0].id").value(1))
+            .andExpect(jsonPath("$.items[0].unit").value("M5-1"))
+            .andExpect(jsonPath("$.count").value(1))
+            .andExpect(jsonPath("$.message").doesNotExist());
+    }
+
+    @Test
+    @DisplayName("GET /api/items/search 결과가 없으면 message 에 안내 문구가 담긴다")
+    void searchItemsReturnsMessageWhenEmpty() throws Exception {
+        when(itemService.search(isNull(), eq("Z9-9"), isNull(), isNull(), isNull(), isNull(), isNull()))
+            .thenReturn(new ItemSearchResult(List.of(), 0L, "검색 결과가 없습니다"));
+
+        mockMvc.perform(get("/api/items/search").param("unit", "Z9-9"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.count").value(0))
+            .andExpect(jsonPath("$.message").value("검색 결과가 없습니다"));
+    }
+
+    @Test
+    @DisplayName("GET /api/items/search 는 level 이 숫자가 아니어도 400 이 아니라 서비스로 그대로 넘어간다")
+    void searchItemsPassesOddParamsThroughWithoutBadRequest() throws Exception {
+        when(itemService.search(isNull(), isNull(), eq("-1"), isNull(), isNull(), isNull(), isNull()))
+            .thenReturn(new ItemSearchResult(List.of(), 0L, "검색 결과가 없습니다"));
+
+        mockMvc.perform(get("/api/items/search").param("level", "-1"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.count").value(0));
+    }
+
+    @Test
+    @DisplayName("GET /api/items/search 파라미터가 전혀 없어도 서비스에 null 로 위임한다")
+    void searchItemsWithNoParamsDelegatesNulls() throws Exception {
+        when(itemService.search(any(), any(), any(), any(), any(), any(), any()))
+            .thenReturn(new ItemSearchResult(List.of(), 0L, "검색 결과가 없습니다"));
+
+        mockMvc.perform(get("/api/items/search"))
+            .andExpect(status().isOk());
     }
 }
