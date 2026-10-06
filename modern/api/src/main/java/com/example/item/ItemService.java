@@ -2,6 +2,7 @@ package com.example.item;
 
 import com.example.common.NotFoundException;
 import java.util.List;
+import java.util.Locale;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.slf4j.Logger;
@@ -136,8 +137,8 @@ public class ItemService {
 
     /** 정렬 기준 · 방향 → JPA {@link Sort}. search.php:266-331 의 switch 문을 그대로 옮긴다. */
     private static Sort resolveSort(String sort, String dir) {
-        String sortKey = sort == null ? "" : sort.trim().toLowerCase();
-        String direction = dir == null ? "" : dir.trim().toLowerCase();
+        String sortKey = sort == null ? "" : sort.trim().toLowerCase(Locale.ROOT);
+        String direction = dir == null ? "" : dir.trim().toLowerCase(Locale.ROOT);
         if (!"asc".equals(direction) && !"desc".equals(direction)) {
             direction = ""; // BR-24
         }

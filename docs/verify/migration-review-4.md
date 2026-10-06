@@ -22,7 +22,7 @@
 
 | # | 심각도 | 파일:줄번호 | 근거 | 수정 방향 |
 |---|---|---|---|---|
-| 1 | 치명 | `modern/api/src/main/java/com/example/assignment/GradingServerClient.java:28-29` (HEAD 기준) | `username = "itembank-grader"`, `password = "Gr4de!Srv#2026"` 가 커밋 `661dbd9` 에 들어 있다. 워킹트리는 설정 주입(41-43행)으로 바꿨지만 커밋되지 않았다. 이대로면 비밀값이 히스토리에 남는다. | 워킹트리 수정본을 반영하고, 노출된 비밀번호는 채점 서버 쪽에서 교체(rotate)한다. 히스토리 정리 여부는 사람이 판단한다. |
+| 1 | 치명 | `modern/api/src/main/java/com/example/assignment/GradingServerClient.java:28-29` (HEAD 기준) | `username` · `password` 문자열 리터럴(값은 문서에 옮기지 않는다) 가 커밋 `661dbd9` 에 들어 있다. 워킹트리는 설정 주입(41-43행)으로 바꿨지만 커밋되지 않았다. 이대로면 비밀값이 히스토리에 남는다. | 워킹트리 수정본을 반영하고, 노출된 비밀번호는 채점 서버 쪽에서 교체(rotate)한다. 히스토리 정리 여부는 사람이 판단한다. |
 | 2 | 경고 | `GradingServerClient.java:42-43`, `modern/api/src/main/resources/application.yml`, `src/test/resources` | `@Value("${grading.username}")`, `@Value("${grading.password}")` 에 기본값이 없고 어떤 설정 파일에도 `grading.*` 가 없다. tester 가 `ItemBankApplicationTests` 에서 `Could not resolve placeholder 'grading.username'` 로 실패하는 것을 확인했다. `bootRun` 도 같은 이유로 실패한다. | 운영은 환경변수로 주입한다. test 프로필(또는 `ItemBankApplicationTests` 의 `@TestPropertySource`)에 더미 값을 둔다. `application.yml` 의 DB · 풀 설정은 건드리지 않는다. |
 | 3 | 경고 | `GradingServerClient.java` 전체, `GradingServerClientTest.java` 전체 | 요청 문장으로 설명되지 않는 외부 호출 클라이언트와 설정 키(`grading.*`)다. `661dbd9`(vendor pr-2 적용)에서 들어왔다. | 이관 브랜치에서 분리하고 별도 요청 · 별도 PR 로 다룬다. |
 | 4 | 경고 | `GradingServerClient.java` 의 `buildRequest` (HEAD 56행) | HEAD 의 JSON 본문은 문자열 연결이라 `studentId` 에 `"` 나 `\` 가 들어가면 필드 주입이 가능했다. 워킹트리는 Jackson 직렬화와 `STU-<숫자>` 검증으로 고쳤고, tester 가 잘못된 studentId 10종 · null 거부 테스트를 추가해 통과를 확인했다. | 워킹트리 수정본을 커밋하면 해소된다(이슈 1 과 함께). |

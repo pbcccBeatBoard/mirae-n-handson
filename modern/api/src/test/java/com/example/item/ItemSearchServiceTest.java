@@ -2,6 +2,7 @@ package com.example.item;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -106,6 +107,130 @@ class ItemSearchServiceTest {
         ItemSearchResult result = itemService.search(null, null, "5", "문장제", null, null, null);
 
         assertThat(result.items()).extracting(ItemSearchRow::title).containsExactly("난이도 5 분수");
+    }
+
+    @Test
+    @DisplayName("태그로 필터한 뒤에도 행의 tags 는 필터 대상 외 태그를 포함한 전체 태그다(BR-11)")
+    void tagFilterKeepsAllTagsOnRow() {
+        ItemSearchResult result = itemService.search(null, null, null, "계산", null, null, null);
+
+        assertThat(result.items()).extracting(ItemSearchRow::title)
+            .containsExactly("분수 문장제", "분모가 같은 분수의 덧셈");
+        ItemSearchRow multiTag = result.items().get(0);
+        assertThat(multiTag.tags()).containsExactlyInAnyOrder("계산", "문장제");
+        assertThat(result.items().get(1).tags()).containsExactly("계산");
+    }
+
+    @Test
+    @DisplayName("level 이 소수(4.9)면 정수부 4로 비교한다(BR-09)")
+    void decimalLevelCastsToIntegerPart() {
+        ItemSearchResult result = itemService.search(null, null, "4.9", null, null, null, null);
+
+        assertThat(result.items()).extracting(ItemSearchRow::title).containsExactly("분수 문장제");
+    }
+
+    @Test
+    @DisplayName("level 이 '4abc' 면 앞쪽 숫자 4로 비교한다(BR-09)")
+    void levelWithTrailingGarbageUsesLeadingDigits() {
+        ItemSearchResult result = itemService.search(null, null, "4abc", null, null, null, null);
+
+        assertThat(result.items()).extracting(ItemSearchRow::title).containsExactly("분수 문장제");
+    }
+
+    @Test
+    @DisplayName("level 이 지수 표기 '1e3' 이면 PHP 7.4 는 1000으로 캐스팅하므로 0건이다 — 불일치 의심(BR-09)")
+    void exponentLevelCastsLikePhp74() {
+        ItemSearchResult result = itemService.search(null, null, "1e3", null, null, null, null);
+
+        assertThat(result.count()).isZero();
+        assertThat(result.items()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("level 이 int 범위를 넘는 아주 큰 수면 0건이고 오류가 아니다(BR-09)")
+    void hugeLevelReturnsEmpty() {
+        ItemSearchResult overInt = itemService.search(null, null, "99999999999", null, null, null, null);
+        ItemSearchResult overLong = itemService.search(null, null, "99999999999999999999999", null, null, null, null);
+
+        assertThat(overInt.count()).isZero();
+        assertThat(overLong.count()).isZero();
+        assertThat(overLong.message()).isEqualTo("검색 결과가 없습니다");
+    }
+
+    @Test
+    @DisplayName("level 이 숫자가 아니면 0으로 캐스팅되어 0건이다(BR-09)")
+    void nonNumericLevelCastsToZero() {
+        ItemSearchResult result = itemService.search(null, null, "abc", null, null, null, null);
+
+        assertThat(result.count()).isZero();
+    }
+
+    private List<String> titles(String sort, String dir) {
+        return itemService.search(null, null, "", null, sort, dir, null).items().stream()
+            .map(ItemSearchRow::title).toList();
+    }
+
+    @Test
+    @DisplayName("sort=unit: 방향 생략·asc 는 단원 오름차순, desc 는 내림차순이고 난이도 내림차순·id 오름차순이 뒤따른다(BR-22)")
+    void sortByUnit() {
+        assertThat(titles("unit", null))
+            .containsExactly("분수 문장제", "분모가 같은 분수의 덧셈", "긴 태그 문항", "소수 곱셈");
+        assertThat(titles("unit", "asc")).isEqualTo(titles("unit", null));
+        assertThat(titles("unit", "desc"))
+            .containsExactly("긴 태그 문항", "소수 곱셈", "분수 문장제", "분모가 같은 분수의 덧셈");
+    }
+
+    @Test
+    @DisplayName("sort=title: 제목 오름차순이 기본, desc 면 내림차순")
+    void sortByTitle() {
+        assertThat(titles("title", null))
+            .containsExactly("긴 태그 문항", "분모가 같은 분수의 덧셈", "분수 문장제", "소수 곱셈");
+        assertThat(titles("title", "desc"))
+            .containsExactly("소수 곱셈", "분수 문장제", "분모가 같은 분수의 덧셈", "긴 태그 문항");
+    }
+
+    @Test
+    @DisplayName("sort=created: 생성 시각이 같으면 방향과 무관하게 id 오름차순")
+    void sortByCreated() {
+        List<String> byId = titles("id", "asc");
+        assertThat(titles("created", null)).isEqualTo(byId);
+        assertThat(titles("created", "asc")).isEqualTo(byId);
+        assertThat(titles("created", "desc")).isEqualTo(byId);
+    }
+
+    @Test
+    @DisplayName("sort=level: 기본은 내림차순, asc 만 오름차순이며 잘못된 dir 은 무시된다")
+    void sortByLevel() {
+        assertThat(titles("level", null))
+            .containsExactly("분수 문장제", "긴 태그 문항", "분모가 같은 분수의 덧셈", "소수 곱셈");
+        assertThat(titles("level", "asc"))
+            .containsExactly("분모가 같은 분수의 덧셈", "소수 곱셈", "긴 태그 문항", "분수 문장제");
+        assertThat(titles("level", "sideways")).isEqualTo(titles("level", null));
+    }
+
+    @Test
+    @DisplayName("sort=id: 기본 오름차순, desc 면 내림차순, 잘못된 dir 은 오름차순(BR-24)")
+    void sortById() {
+        assertThat(titles("id", "desc"))
+            .containsExactly("긴 태그 문항", "소수 곱셈", "분수 문장제", "분모가 같은 분수의 덧셈");
+        assertThat(titles("id", "bogus")).isEqualTo(titles("id", "asc"));
+    }
+
+    @Test
+    @DisplayName("sort · dir 은 앞뒤 공백을 자르고 대소문자를 구분하지 않는다")
+    void sortAndDirAreTrimmedAndCaseInsensitive() {
+        assertThat(titles("  TiTle ", " DESC ")).isEqualTo(titles("title", "desc"));
+        assertThat(titles(" UNIT", "Desc")).isEqualTo(titles("unit", "desc"));
+        assertThat(titles(" Level ", " ASC")).isEqualTo(titles("level", "asc"));
+    }
+
+    @Test
+    @DisplayName("알 수 없는 sort 는 dir 과 무관하게 기본 정렬(난이도 내림차순, id 오름차순)이다(BR-23)")
+    void unknownSortIgnoresDir() {
+        List<String> defaultOrder = titles(null, null);
+        assertThat(titles("nope", "asc")).isEqualTo(defaultOrder);
+        assertThat(titles("title;drop table item", "desc")).isEqualTo(defaultOrder);
+        assertThat(titles("", "desc")).isEqualTo(defaultOrder);
     }
 
     @Test

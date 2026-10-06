@@ -25,7 +25,7 @@
 
 | # | 심각도 | 파일:줄번호 | 근거 | 수정 방향 | 상태 |
 |---|---|---|---|---|---|
-| 1 | 치명 | `modern/api/src/main/java/com/example/assignment/GradingServerClient.java:28-29` (HEAD 기준) | 커밋 `661dbd9` 에 `username = "itembank-grader"`, `password = "Gr4de!Srv#2026"` 리터럴이 있다. 워킹트리는 `@Value("${grading.username}")`, `@Value("${grading.password}")` 주입으로 바꿨다. | 워킹트리 수정본을 반영하고(커밋은 사용자 확인 후), 노출된 비밀번호는 채점 서버 쪽에서 교체한다. 히스토리 정리 여부는 사람이 결정한다. | 코드는 해소, 반영 · 교체 전까지 미해소 |
+| 1 | 치명 | `modern/api/src/main/java/com/example/assignment/GradingServerClient.java:28-29` (HEAD 기준) | 커밋 `661dbd9` 에 `username` · `password` 문자열 리터럴(값은 문서에 옮기지 않는다) 리터럴이 있다. 워킹트리는 `@Value("${grading.username}")`, `@Value("${grading.password}")` 주입으로 바꿨다. | 워킹트리 수정본을 반영하고(커밋은 사용자 확인 후), 노출된 비밀번호는 채점 서버 쪽에서 교체한다. 히스토리 정리 여부는 사람이 결정한다. | 코드는 해소, 반영 · 교체 전까지 미해소 |
 | 2 | 경고 | `GradingServerClient.java:42-43`, `modern/api/src/main/resources/application.yml`(grading 키 없음) | 기본값 없는 `@Value` 라서 운영과 `bootRun` 은 환경변수(`GRADING_USERNAME`, `GRADING_PASSWORD`) 없이는 기동에 실패한다. test 프로필은 `application-test.yml` 에 더미 값이 추가돼 해소됐다(54/54 통과). | 운영 주입 방법을 문서화한다. `application.yml` 의 DB · 풀 설정은 건드리지 않는다. | 테스트 쪽 해소, 운영 쪽 남음 |
 | 3 | 경고 | `GradingServerClient.java` 전체, `GradingServerClientTest.java` 전체, `application-test.yml` 의 grading 블록 | 문항 검색 이관 요청으로 설명되지 않는 외부 호출 클라이언트와 설정 키다. `661dbd9` 에서 들어왔다. 이번 수정으로 범위 밖 변경이 오히려 늘었다. | 별도 요청 · 별도 PR 로 분리하거나, 사람이 범위에 포함하기로 명시한다. | 남음(사람 결정) |
 | 4 | 경고 | `GradingServerClient.java:68-84`(워킹트리), HEAD 56행 | HEAD 의 문자열 연결 JSON 은 `studentId` 에 `"` · `\` 가 있으면 필드 주입이 가능했다. 워킹트리는 `STU-\d+` 검증과 Jackson 직렬화로 고쳤고, 잘못된 studentId 10종 · null 거부 테스트가 통과한다. | 이슈 1 과 함께 커밋한다. | 코드는 해소, 미커밋 |
