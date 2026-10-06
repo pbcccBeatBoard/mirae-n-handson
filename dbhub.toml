@@ -1,0 +1,13 @@
+# dbhub MCP 설정 — 읽기 전용으로만 연결한다.
+# DB_DSN 은 환경변수에서 읽는다(.mcp.json 의 env 로 전달).
+#   export DB_DSN="mariadb://readonly:readonly-pass@localhost:3306/itembank"
+
+[[sources]]
+id = "itembank"
+dsn = "${DB_DSN}"
+
+[[tools]]
+name = "execute_sql"
+source = "itembank"
+readonly = true
+max_rows = 200
