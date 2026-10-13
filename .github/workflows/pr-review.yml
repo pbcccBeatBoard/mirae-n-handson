@@ -18,7 +18,7 @@ jobs:
 
       - uses: anthropics/claude-code-action@v1
         with:
-          claude_code_oauth_token: testsecret
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           # API 키로 인증하는 경우 위 줄 대신 아래 줄을 사용:
           # anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           prompt: |
